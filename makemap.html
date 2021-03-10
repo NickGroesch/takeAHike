@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take A Hike!</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+        integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+        crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+        integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+        crossorigin=""></script>
+    <style>
+        #mapid {
+            height: 500px;
+        }
+    </style>
+</head>
+
+<body>
+    <hi id="clickme">take a hike</hi>
+    <p id='bang'>s'mobile first, please</p>
+    <p id="sponse">hmm</p>
+    <div id="mapid"></div>
+
+    <script>
+        let db, timepointsStore, timeIndex, mymap;
+        const idbIfYouPlease = indexedDB.open('takeAHike', 1)
+        idbIfYouPlease.onerror = e => { console.error(e.target.errorCode) }
+        idbIfYouPlease.onsuccess = e => {
+            db = e.target.result
+            console.log(e.target)
+        }
+        idbIfYouPlease.onupgradeneeded = e => {
+            var db = e.target.result;
+            timepointsStore = db.createObjectStore("timepoints", { keyPath: "id", autoIncrement: true });
+            const timeIndex = timepointsStore.createIndex("time", "time", {})
+            const dateIndex = timepointsStore.createIndex("date", "date", {})
+            const monthIndex = timepointsStore.createIndex("month", "month", {})
+            const latIndex = timepointsStore.createIndex("lat", "lat", {})
+            const lonIndex = timepointsStore.createIndex("lon", "lon", {})
+        };
+
+
+        document.querySelector("#clickme").onclick = () => {
+            navigator.geolocation.getCurrentPosition(position => {
+                console.log(position)
+                const tpTransaction = db.transaction("timepoints", "readwrite")
+                const tpStore = tpTransaction.objectStore("timepoints")
+                const now = new Date()
+                tpStore.add({
+                    time: position.timestamp,
+                    month: now.getMonth() + 1, //1dexed for humanity
+                    date: now.getDate() + 1,
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude,
+                })
+            })
+        }
+        function displayData() {
+            console.log('displayfully')
+            const tpTransaction = db.transaction("timepoints", "readwrite")
+            const tpStore = tpTransaction.objectStore("timepoints")
+            const getCursorRequest = tpStore.openCursor();
+            getCursorRequest.onsuccess = e => {
+                const cursor = e.target.result;
+                console.log("x", cursor)
+                if (cursor) {
+                    console.log(cursor.value);
+                    L.marker([cursor.value.lat, cursor.value.lon]).addTo(mymap)
+                    cursor.continue();
+                } else {
+                    console.log("No documents left!");
+                }
+            };
+            document.getElementById("sponse").textContent = "boohoo"
+        }
+        document.getElementById("bang").onclick = displayData
+        init()
+        async function init() {
+            mymap = L.map('mapid').setView([39.84, -88.99], 13);
+            L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                maxZoom: 18,
+                id: 'mapbox/streets-v11',
+                tileSize: 512,
+                zoomOffset: -1,
+                accessToken: 'pk.eyJ1IjoiZnVua3lmcmVzaCIsImEiOiJja2ExZWFydDMxMDMyM2xuYTB2NWpodTJqIn0.C9WV-XYxOof3mBY9bKgOsg'
+            }).addTo(mymap);
+        }
+    </script>
+</body>
+
+</html>
