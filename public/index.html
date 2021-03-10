@@ -61,6 +61,7 @@
         let hikeInterval
         let hikeNum = 0
         let amHiking = false
+
         function toggleHike() {
             if (amHiking) {
                 stopHike()
@@ -71,6 +72,7 @@
             }
         }
         function startHike() {
+            amHiking = true
             const now = new Date()
             //1dexed for humanity
             const humanMonth = now.getMonth() + 1
@@ -78,13 +80,13 @@
             //TODO get hikenum from idb
             const hikeTransaction = db.transaction("hikes", "readwrite")
             const hikeStore = hikeTransaction.objectStore("hikes")
-            hikeStore.add({
+            const hikeCreation = hikeStore.add({
                 month: humanMonth,
-                date: humanMonth,
+                date: humanDate,
             })
-            hikeTransaction.oncomplete = (event) => {
-                console.log(event.target)
-                hikeNum = 1
+            hikeCreation.onsuccess = (event) => {
+                hikeNum = event.target.result
+                console.log('this is hike number ', hikeNum)
             }
 
             hikeInterval = setInterval(() => {
@@ -92,7 +94,9 @@
                     console.log(position)
                     const tpTransaction = db.transaction("timepoints", "readwrite")
                     const tpStore = tpTransaction.objectStore("timepoints")
+                    console.log(hikeNum)
                     tpStore.add({
+                        hike: hikeNum,
                         time: position.timestamp,
                         lat: position.coords.latitude,
                         lon: position.coords.longitude,
@@ -102,6 +106,7 @@
         }
 
         function stopHike() {
+            amHiking = false
             setTimeout(() => {//allow time to get one last data point
                 clearInterval(hikeInterval)
             }, 3000)
