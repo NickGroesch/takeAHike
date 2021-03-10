@@ -15,6 +15,10 @@
         #mapid {
             height: 500px;
         }
+
+        body {
+            background-image: radial-gradient(aquamarine, orangered);
+        }
     </style>
 </head>
 
@@ -26,7 +30,10 @@
 
     <script>
 
-        let db, timepointsStore, timeIndex, mymap;
+        let db,
+            hikeStore,
+            timepointsStore,
+            timeIndex;
         //request and setup idb
         const idbIfYouPlease = indexedDB.open('takeAHike', 1)
         idbIfYouPlease.onerror = e => { console.error(e.target.errorCode) }
@@ -36,32 +43,69 @@
         }
         idbIfYouPlease.onupgradeneeded = e => {
             var db = e.target.result;
-            timepointsStore = db.createObjectStore("timepoints", { keyPath: "id", autoIncrement: true });
-            const timeIndex = timepointsStore.createIndex("time", "time", {})
-            const dateIndex = timepointsStore.createIndex("date", "date", {})
-            const monthIndex = timepointsStore.createIndex("month", "month", {})
-            const latIndex = timepointsStore.createIndex("lat", "lat", {})
-            const lonIndex = timepointsStore.createIndex("lon", "lon", {})
-        };
+            hikeStore = db.createObjectStore("hikes", { keyPath: "id", autoIncrement: true })
+            const dateIndex = hikeStore.createIndex("date", "date", {})
+            const monthIndex = hikeStore.createIndex("month", "month", {})
 
+            timepointsStore = db.createObjectStore("timepoints", { keyPath: "id", autoIncrement: true });
+            const timeIndex = timepointsStore.createIndex("lat", "lat", {})
+            const lonIndex = timepointsStore.createIndex("lon", "lon", {})
+            const hikeIndex = timepointsStore.createIndex("hike", "hike", {})
+        };
+        const $hike = document.querySelector("#hike")
         //make a datapoint
-        document.querySelector("#hike").onclick = (event) => {
+        $hike.onclick = (event) => {
             event.preventDefault()
-            navigator.geolocation.getCurrentPosition(position => {
-                console.log(position)
-                const now = new Date()
-                const tpTransaction = db.transaction("timepoints", "readwrite")
-                const tpStore = tpTransaction.objectStore("timepoints")
-                tpStore.add({
-                    time: position.timestamp,
-                    month: now.getMonth() + 1, //1dexed for humanity
-                    date: now.getDate() + 1,
-                    lat: position.coords.latitude,
-                    lon: position.coords.longitude,
-                })
-            }, err => console.error(err))
+            toggleHike()
+        }
+        let hikeInterval
+        let hikeNum = 0
+        let amHiking = false
+        function toggleHike() {
+            if (amHiking) {
+                stopHike()
+                $hike.textContent = "take a hike"
+            } else {
+                startHike()
+                $hike.textContent = "füç!< this"
+            }
+        }
+        function startHike() {
+            const now = new Date()
+            //1dexed for humanity
+            const humanMonth = now.getMonth() + 1
+            const humanDate = now.getDate() + 1
+            //TODO get hikenum from idb
+            const hikeTransaction = db.transaction("hikes", "readwrite")
+            const hikeStore = hikeTransaction.objectStore("hikes")
+            hikeStore.add({
+                month: humanMonth,
+                date: humanMonth,
+            })
+            hikeTransaction.oncomplete = (event) => {
+                console.log(event.target)
+                hikeNum = 1
+            }
+
+            hikeInterval = setInterval(() => {
+                navigator.geolocation.getCurrentPosition(position => {
+                    console.log(position)
+                    const tpTransaction = db.transaction("timepoints", "readwrite")
+                    const tpStore = tpTransaction.objectStore("timepoints")
+                    tpStore.add({
+                        time: position.timestamp,
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude,
+                    })
+                }, err => console.error(err))
+            }, 3000)
         }
 
+        function stopHike() {
+            setTimeout(() => {//allow time to get one last data point
+                clearInterval(hikeInterval)
+            }, 3000)
+        }
         //polyline construction
         const latlngs = []
         let lastCursed = 0;
@@ -89,11 +133,10 @@
                     // mymap.fitBounds(polyline.getBounds());
                 }
             };
-
-
             document.getElementById("feedback").textContent = "can you see it?"
         }
-
+        //set up Leaflet
+        let mymap;
         async function init() {
             mymap = L.map('mapid').setView([39.84, -88.99], 13);
             L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {

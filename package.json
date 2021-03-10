@@ -1,0 +1,26 @@
+{
+  "name": "takeahike",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "jest",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "this one"
+  },
+  "keywords": [
+    "take",
+    "a",
+    "hike",
+    ":_)"
+  ],
+  "author": "nick",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "morgan": "^1.10.0"
+  }
+}
