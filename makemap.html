@@ -44,7 +44,7 @@
             const lonIndex = timepointsStore.createIndex("lon", "lon", {})
         };
 
-
+        //make a datapoint
         document.querySelector("#hike").onclick = (event) => {
             event.preventDefault()
             navigator.geolocation.getCurrentPosition(position => {
@@ -62,27 +62,33 @@
             }, err => console.error(err))
         }
 
+        //polyline construction
+        const latlngs = []
+        let lastCursed = 0;
         document.getElementById("polyline").onclick = displayData
         function displayData() {
-            const latlngs = []
             const tpTransaction = db.transaction("timepoints", "readwrite")
             const tpStore = tpTransaction.objectStore("timepoints")
-            const getCursorRequest = tpStore.openCursor();
-
+            const getCursorRequest = tpStore.openCursor(IDBKeyRange.lowerBound(lastCursed, true));
+            let compLastCursed = lastCursed
+            let tempLastCursed = lastCursed
             getCursorRequest.onsuccess = e => {
                 const cursor = e.target.result;
                 console.log("x", cursor)
                 if (cursor) {
-                    console.log(cursor.value);
                     latlngs.push([cursor.value.lat, cursor.value.lon])
                     // L.marker([cursor.value.lat, cursor.value.lon]).addTo(mymap)
                     cursor.continue();
+                    tempLastCursed++
                 } else {
                     console.log("No documents left!");
+                    let diffLastCursed = tempLastCursed - compLastCursed
+                    lastCursed = tempLastCursed
+                    console.log(`we did ${diffLastCursed} iterations`)
                     const polyline = L.polyline(latlngs, { color: 'aquamarine' }).addTo(mymap);
+                    // mymap.fitBounds(polyline.getBounds());
                 }
             };
-            // mymap.fitBounds(polyline.getBounds());
 
 
             document.getElementById("feedback").textContent = "can you see it?"
