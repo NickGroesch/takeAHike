@@ -19,13 +19,15 @@
 </head>
 
 <body>
-    <button id="clickme">take a hike</button>
-    <p id='bang'>s'mobile first, please</p>
-    <p id="sponse">hmm</p>
+    <button id="hike">take a hike</button>
+    <p id='polyline'>show me some data</p>
+    <p id="feedback">nothing to see here</p>
     <div id="mapid"></div>
 
     <script>
+
         let db, timepointsStore, timeIndex, mymap;
+        //request and setup idb
         const idbIfYouPlease = indexedDB.open('takeAHike', 1)
         idbIfYouPlease.onerror = e => { console.error(e.target.errorCode) }
         idbIfYouPlease.onsuccess = e => {
@@ -43,13 +45,13 @@
         };
 
 
-        document.querySelector("#clickme").onclick = (event) => {
+        document.querySelector("#hike").onclick = (event) => {
             event.preventDefault()
             navigator.geolocation.getCurrentPosition(position => {
                 console.log(position)
+                const now = new Date()
                 const tpTransaction = db.transaction("timepoints", "readwrite")
                 const tpStore = tpTransaction.objectStore("timepoints")
-                const now = new Date()
                 tpStore.add({
                     time: position.timestamp,
                     month: now.getMonth() + 1, //1dexed for humanity
@@ -59,26 +61,33 @@
                 })
             }, err => console.error(err))
         }
+
+        document.getElementById("polyline").onclick = displayData
         function displayData() {
-            console.log('displayfully')
+            const latlngs = []
             const tpTransaction = db.transaction("timepoints", "readwrite")
             const tpStore = tpTransaction.objectStore("timepoints")
             const getCursorRequest = tpStore.openCursor();
+
             getCursorRequest.onsuccess = e => {
                 const cursor = e.target.result;
                 console.log("x", cursor)
                 if (cursor) {
                     console.log(cursor.value);
-                    L.marker([cursor.value.lat, cursor.value.lon]).addTo(mymap)
+                    latlngs.push([cursor.value.lat, cursor.value.lon])
+                    // L.marker([cursor.value.lat, cursor.value.lon]).addTo(mymap)
                     cursor.continue();
                 } else {
                     console.log("No documents left!");
+                    const polyline = L.polyline(latlngs, { color: 'aquamarine' }).addTo(mymap);
                 }
             };
-            document.getElementById("sponse").textContent = "boohoo"
+            // mymap.fitBounds(polyline.getBounds());
+
+
+            document.getElementById("feedback").textContent = "can you see it?"
         }
-        document.getElementById("bang").onclick = displayData
-        init()
+
         async function init() {
             mymap = L.map('mapid').setView([39.84, -88.99], 13);
             L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
@@ -90,6 +99,8 @@
                 accessToken: 'pk.eyJ1IjoiZnVua3lmcmVzaCIsImEiOiJja2ExZWFydDMxMDMyM2xuYTB2NWpodTJqIn0.C9WV-XYxOof3mBY9bKgOsg'
             }).addTo(mymap);
         }
+        init()
+
     </script>
 </body>
 
