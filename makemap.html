@@ -19,7 +19,7 @@
 </head>
 
 <body>
-    <hi id="clickme">take a hike</hi>
+    <button id="clickme">take a hike</button>
     <p id='bang'>s'mobile first, please</p>
     <p id="sponse">hmm</p>
     <div id="mapid"></div>
@@ -43,7 +43,8 @@
         };
 
 
-        document.querySelector("#clickme").onclick = () => {
+        document.querySelector("#clickme").onclick = (event) => {
+            event.preventDefault()
             navigator.geolocation.getCurrentPosition(position => {
                 console.log(position)
                 const tpTransaction = db.transaction("timepoints", "readwrite")
@@ -56,7 +57,7 @@
                     lat: position.coords.latitude,
                     lon: position.coords.longitude,
                 })
-            })
+            }, err => console.error(err))
         }
         function displayData() {
             console.log('displayfully')
