@@ -1,0 +1,20 @@
+{
+    "name": "takeAHike",
+    "short_name": "takeAHike",
+    "icons": [
+        {
+            "src": "images/frycon192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "images/frycon512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "blue",
+    "background_color": "pink",
+    "start_url": "/index.html",
+    "display": "standalone"
+}

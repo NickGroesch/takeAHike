@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Take A Hike!</title>
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
         integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
         crossorigin="" />
@@ -29,6 +30,7 @@
     <div id="mapid"></div>
 
     <script>
+        let wakeLock = null;
 
         let db,
             hikeStore,
@@ -53,6 +55,8 @@
             const hikeIndex = timepointsStore.createIndex("hike", "hike", {})
         };
         const $hike = document.querySelector("#hike")
+        const $polyline = document.querySelector("#polyline")
+        const $feedback = document.querySelector("#feedback")
         //make a datapoint
         $hike.onclick = (event) => {
             event.preventDefault()
@@ -72,6 +76,7 @@
             }
         }
         function startHike() {
+            getWakeLock()
             amHiking = true
             const now = new Date()
             //1dexed for humanity
@@ -102,15 +107,17 @@
                         lon: position.coords.longitude,
                     })
                 }, err => console.error(err))
-            }, 3000)
+            }, 1000)
         }
 
         function stopHike() {
+            releaseWakeLock()
             amHiking = false
             setTimeout(() => {//allow time to get one last data point
                 clearInterval(hikeInterval)
-            }, 3000)
+            }, 1000)
         }
+
         //polyline construction
         const latlngs = []
         let lastCursed = 0;
@@ -140,6 +147,7 @@
             };
             document.getElementById("feedback").textContent = "can you see it?"
         }
+
         //set up Leaflet
         let mymap;
         async function init() {
@@ -155,6 +163,44 @@
         }
         init()
 
+        async function getWakeLock() {
+            // create an async function to request a wake lock
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                $feedback.textContent = 'Wake Lock is active!';
+            } catch (err) {
+                // The Wake Lock request has failed - usually system related, such as battery.
+                $feedback.textContent = `${err.name}, ${err.message}`;
+            }
+        }
+        function releaseWakeLock() {
+            wakeLock.release()
+                .then(() => {
+                    wakeLock = null;
+                    $feedback.textContent = 'Screen Wake Lock released!';
+                }).catch(err => console.error(err))
+        }
+        window.addEventListener('DOMContentLoaded', (event) => {
+            console.log('DOM fully loaded and parsed');
+            if ('wakeLock' in navigator) {
+                isSupported = true;
+                $feedback.textContent = 'Screen Wake Lock API supported!';
+            } else {
+                wakeButton.disabled = true;
+                $feedback.textContent = 'Wake lock is not supported by this browser.';
+            }
+        });
+
+    </script>
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("service-worker.js")
+                    .then(reg => {
+                        console.log("We found your service worker file!", reg);
+                    });
+            });
+        }
     </script>
 </body>
 
